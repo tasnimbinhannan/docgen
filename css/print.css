@@ -1,0 +1,74 @@
+/* ==========================================================================
+   DOCUGEN - PRINT & EXPORT STYLESHEET
+   Ensures 100% fidelity when exporting to PDF or printing
+   ========================================================================== */
+
+@media print {
+  /* Hide all interactive UI elements */
+  .app-header,
+  .nav-tabs-wrapper,
+  .toolbar-card,
+  .action-buttons-group,
+  .toast-container,
+  .modal-backdrop,
+  .btn,
+  .no-print,
+  .public-top-bar,
+  .generator-form-pane,
+  .dashboard-stats,
+  .doc-preview-wrapper::before {
+    display: none !important;
+  }
+
+  /* Reset body and page styling */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    font-size: 12pt;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+  }
+
+  .app-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .doc-preview-wrapper {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+  }
+
+  /* Force background colors and gradients in print */
+  .ticket-container,
+  .cert-container,
+  .receipt-container {
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin: 0 auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .ticket-container {
+    border: 1px solid #334155 !important;
+    background: #0d1527 !important;
+  }
+
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+}

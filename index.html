@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuGen — Document & Certificate Generation Engine</title>
+  <meta name="description" content="Generate official insurance certificates from DOCX templates with automated field mapping, instant local download, and Supabase cloud ledger tracking.">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/document-templates.css">
+  <link rel="stylesheet" href="css/print.css">
+
+  <!-- Third-party Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/vendor/jszip.min.js"></script>
+  <script src="js/vendor/docx-preview.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- =========================================================================
+       APP HEADER / NAVBAR
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="app-container">
+      <nav class="header-nav">
+        <!-- Brand -->
+        <a href="index.html" class="brand-group">
+          <div class="brand-logo-icon">🛡️</div>
+          <div class="brand-text">
+            <span class="brand-title">DocuGen <span class="gradient-text">Pro</span></span>
+            <span class="brand-subtitle">Insurance Certificate & Document Generator</span>
+          </div>
+        </a>
+
+        <!-- Right Header Actions -->
+        <div class="nav-actions">
+          <!-- Supabase Connection Status Pill -->
+          <button id="connectionStatusPill" class="status-pill" onclick="UI.openModal('modalSupabaseConfig')">
+            <span id="connectionStatusDot" class="status-dot demo"></span>
+            <span id="connectionStatusText">Supabase: Demo Mode</span>
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button id="btnThemeToggle" class="btn btn-outline btn-icon" title="Toggle Theme" aria-label="Toggle Theme">
+            <span id="themeToggleIcon">☀️</span>
+          </button>
+
+          <!-- User Info & Logout (Visible when signed in) -->
+          <div id="userBadgeContainer" class="hidden" style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="userEmailBadge" class="code-badge">admin@docugen.io</span>
+            <button id="btnSignOut" class="btn btn-danger-outline btn-sm" title="Sign Out">
+              Sign Out ➔
+            </button>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================= -->
+  <main class="main-content">
+    <div class="app-container">
+
+      <!-- =====================================================================
+           SECTION 1: ADMIN LOGIN (Visible when not authenticated)
+           ===================================================================== -->
+      <section id="loginSection" class="animate-fade-in" style="max-width: 440px; margin: 3rem auto 0;">
+        <div class="glass-card" style="padding: 2.25rem;">
+          <div style="text-align: center; margin-bottom: 1.75rem;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔐</div>
+            <h2>Admin Sign In</h2>
+            <p style="margin-top: 0.25rem;">Sign in to access document generation and tracking records.</p>
+          </div>
+
+          <!-- Login Error Alert -->
+          <div id="loginErrorAlert" class="hidden" style="background: rgba(244, 63, 94, 0.15); border: 1px solid var(--accent-rose); color: var(--accent-rose); padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Invalid credentials.
+          </div>
+
+          <form id="loginForm">
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" for="loginEmail">Admin Email</label>
+              <input type="email" id="loginEmail" class="form-control" placeholder="admin@docugen.io" value="admin@docugen.io" required autocomplete="email">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label" for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" value="admin123" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%;">
+              Sign In to Workspace ➔
+            </button>
+          </form>
+
+          <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.775rem; color: var(--text-dim);">
+            <span>💡 Tip: If using Supabase Auth, use your project users. In demo mode, sign in with any valid password.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           SECTION 2: ADMIN PROTECTED WORKSPACE (Visible when authenticated)
+           ===================================================================== -->
+      <section id="adminSection" class="hidden">
+        
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs-wrapper">
+          <div class="nav-tabs">
+            <button class="tab-btn active" data-target="tabGenerator">
+              <span>⚡</span> Generate Document
+            </button>
+            <button class="tab-btn" data-target="tabDashboard">
+              <span>📊</span> Document Tracker & Records
+            </button>
+          </div>
+
+          <div>
+            <button class="btn btn-outline btn-sm" onclick="UI.openModal('modalSupabaseConfig')">
+              ⚙️ Supabase Settings
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 1: DOCUMENT GENERATOR (Focused Form Only) -->
+        <div id="tabGenerator" class="tab-pane animate-fade-in">
+          
+          <div class="glass-card" style="max-width: 900px; margin: 0 auto; padding: 2rem;">
+            
+            <!-- Header Bar -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.75rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-subtle);">
+              <div>
+                <h2>Insurance Certificate Generator</h2>
+                <p style="font-size: 0.875rem; margin-top: 0.2rem;">
+                  Fill in the policy information below. Clicking <strong>Generate</strong> will populate <code class="code-badge">Insurance-Template.docx</code> and download the completed file immediately.
+                </p>
+              </div>
+
+              <div style="display: flex; gap: 0.6rem;">
+                <button type="button" id="btnFillSampleData" class="btn btn-secondary btn-sm" title="Pre-fill sample data">
+                  🎲 Auto-Fill Sample
+                </button>
+                <button type="button" id="btnResetForm" class="btn btn-outline btn-sm" title="Clear and reset form fields">
+                  ↺ Reset
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Input Form -->
+            <form id="docGenerationForm">
+              <div id="dynamicFormFields" class="form-grid">
+                <!-- Injected dynamically via js/documents.js -->
+              </div>
+
+              <!-- Submit Actions -->
+              <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+                  <span>📁 Template:</span>
+                  <strong style="color: var(--text-main);">Insurance-Template.docx</strong>
+                  <span class="badge badge-success" style="margin-left: 0.35rem;">PDF & DOCX Support</span>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button type="button" id="btnDownloadDocxOnly" class="btn btn-secondary btn-lg">
+                    📄 Download DOCX (.docx)
+                  </button>
+                  <button type="submit" id="btnSubmitGenerate" class="btn btn-primary btn-lg" style="min-width: 280px;">
+                    ⚡ Generate & Download PDF Document
+                  </button>
+                </div>
+              </div>
+            </form>
+
+          </div>
+        </div>
+
+        <!-- TAB 2: DOCUMENT TRACKER & DASHBOARD -->
+        <div id="tabDashboard" class="tab-pane hidden">
+          
+          <!-- Stats Summary Grid -->
+          <div class="stats-grid" id="dashStatsContainer">
+            <div class="glass-card stat-card">
+              <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📁</div>
+              <div class="stat-info">
+                <span id="statTotalDocs" class="stat-value">0</span>
+                <span class="stat-label">Total Documents</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon" style="background: rgba(200, 16, 46, 0.15); color: #f43f5e;">🛡️</div>
+              <div class="stat-info">
+                <span id="statTotalTickets" class="stat-value">0</span>
+                <span class="stat-label">Insurance Policies</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">🟢</div>
+              <div class="stat-info">
+                <span id="statTotalCerts" class="stat-value">Active</span>
+                <span class="stat-label">Database Status</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">📥</div>
+              <div class="stat-info">
+                <span id="statTotalInvoices" class="stat-value">DOCX</span>
+                <span class="stat-label">Export Format</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter & Search Toolbar -->
+          <div class="glass-card toolbar-card">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="dashSearchInput" class="form-control" placeholder="Search by Policy No., Insured Name, or Area...">
+            </div>
+
+            <div class="filter-group">
+              <input type="date" id="dashFilterStart" class="form-control" title="Filter From Date" style="width: auto;">
+              <input type="date" id="dashFilterEnd" class="form-control" title="Filter To Date" style="width: auto;">
+
+              <button id="dashBtnClearFilters" class="btn btn-outline btn-sm" title="Reset all filters">
+                Clear
+              </button>
+
+              <button id="dashBtnRefresh" class="btn btn-secondary btn-sm" title="Refresh Table">
+                🔄
+              </button>
+            </div>
+          </div>
+
+          <!-- Documents Data Table -->
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Policy Reference</th>
+                  <th>Type</th>
+                  <th>Insured Name</th>
+                  <th>Generated At</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dashTableBody">
+                <!-- Populated via js/dashboard.js -->
+              </tbody>
+            </table>
+
+            <!-- Empty State -->
+            <div id="dashEmptyState" class="empty-state hidden">
+              <div class="empty-state-icon">📄</div>
+              <h3>No Documents Found</h3>
+              <p>No document records match your current search and filter criteria.</p>
+              <button class="btn btn-primary btn-sm" onclick="document.querySelector('.tab-btn[data-target=\'tabGenerator\']').click()">
+                ⚡ Create First Document
+              </button>
+            </div>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding: 0.5rem 0;">
+            <div id="dashPageIndicator" style="font-size: 0.85rem; color: var(--text-muted);">
+              Page 1 of 1 (0 total)
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="dashBtnPrevPage" class="btn btn-secondary btn-sm" disabled>◀ Previous</button>
+              <button id="dashBtnNextPage" class="btn btn-secondary btn-sm" disabled>Next ▶</button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       MODAL 1: DOCUMENT GENERATION SUCCESS (SRS FR-1.7)
+       ========================================================================= -->
+  <div id="modalGenerationSuccess" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🎉 Insurance Document Generated!</h3>
+        <button class="btn btn-outline btn-sm" onclick="UI.closeModal('modalGenerationSuccess')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.12); border: 1px solid var(--accent-emerald); color: #34d399; padding: 0.85rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+          <span style="font-size: 1.5rem;">📥</span>
+          <div>
+            <strong>Document Ready & Downloaded</strong>
+            <div style="font-size: 0.775rem; color: var(--text-main);">Your official certificate has been rendered and downloaded to your machine.</div>
+          </div>
+        </div>
+
+        <div style="background: var(--bg-card-solid); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1.25rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Policy Reference No.</div>
+          <div id="successDocRef" style="font-family: var(--font-mono); font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-top: 0.25rem;">
+            T2P-2025-XXXXX
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="successDocUrlInput">Public Shareable Verification Link</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="successDocUrlInput" class="form-control" readonly style="font-family: var(--font-mono); font-size: 0.8rem;">
+            <button id="btnSuccessCopyLink" class="btn btn-primary btn-sm" type="button">
+              📋 Copy
+            </button>
+          </div>
+          <span style="font-size: 0.725rem; color: var(--text-dim); margin-top: 0.35rem;">
+            Anyone holding this unguessable link can preview and verify the certificate online.
+          </span>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
+        <button id="btnSuccessDownloadDocx" class="btn btn-outline btn-sm" type="button">
+          📄 Download DOCX
+        </button>
+        <button id="btnSuccessDownloadPdf" class="btn btn-secondary btn-sm" type="button">
+          📥 Download PDF
+        </button>
+        <button id="btnSuccessOpenPublic" class="btn btn-primary btn-sm" type="button">
+          👁️ Open Online Portal ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: SUPABASE CONFIGURATION SETTINGS
+       ========================================================================= -->
+  <div id="modalSupabaseConfig" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Supabase Configuration</h3>
+        <button class="btn btn-outline btn-sm" onclick="UI.closeModal('modalSupabaseConfig')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; margin-bottom: 1.25rem;">
+          Enter your Supabase project credentials to store policy records in PostgreSQL. You can also run in <strong>Demo Mode</strong> without credentials for instant local testing.
+        </p>
+
+        <form id="supabaseConfigForm" onsubmit="event.preventDefault(); handleSaveConfig();">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" for="cfgSupabaseUrl">Supabase Project URL</label>
+            <input type="url" id="cfgSupabaseUrl" class="form-control" placeholder="https://your-project.supabase.co">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="cfgSupabaseAnonKey">Supabase Anon Public Key</label>
+            <input type="text" id="cfgSupabaseAnonKey" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            <span style="font-size: 0.725rem; color: var(--text-dim); margin-top: 0.25rem;">
+              Found in: Supabase Dashboard ➔ Project Settings ➔ API ➔ Anon Public Key. Safe for client use with RLS.
+            </span>
+          </div>
+
+          <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.775rem; color: var(--text-muted); margin-bottom: 1rem;">
+            🔒 <strong>GitHub Safety</strong>: Credentials saved here are stored only in your browser's private <code class="code-badge">localStorage</code> and never committed to Git history.
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="handleClearConfig()">
+              Switch to Demo Mode
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm">
+              Save & Connect
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Stack -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/documents.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/auth.js"></script>
+
+  <!-- App Bootstrap -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.initTheme();
+      UI.initTabs();
+      SupabaseService.init();
+      await Auth.init();
+      DocumentEngine.init();
+      Dashboard.init();
+
+      // Populate Settings Modal with active values
+      const cfgUrl = document.getElementById('cfgSupabaseUrl');
+      const cfgKey = document.getElementById('cfgSupabaseAnonKey');
+      if (cfgUrl) cfgUrl.value = window.APP_CONFIG.SUPABASE_URL || '';
+      if (cfgKey) cfgKey.value = window.APP_CONFIG.SUPABASE_ANON_KEY || '';
+    });
+
+    function handleSaveConfig() {
+      const url = document.getElementById('cfgSupabaseUrl').value;
+      const key = document.getElementById('cfgSupabaseAnonKey').value;
+
+      if (!url || !key) {
+        UI.showToast('Please provide both Supabase URL and Anon Key', 'warning');
+        return;
+      }
+
+      window.saveSupabaseConfig(url, key);
+      UI.showToast('Supabase configuration saved and connected!', 'success');
+      UI.closeModal('modalSupabaseConfig');
+      setTimeout(() => window.location.reload(), 600);
+    }
+
+    function handleClearConfig() {
+      window.clearSupabaseConfig();
+      UI.showToast('Switched to Demo Local Storage Mode', 'info');
+      UI.closeModal('modalSupabaseConfig');
+      setTimeout(() => window.location.reload(), 600);
+    }
+  </script>
+</body>
+</html>

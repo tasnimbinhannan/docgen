@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Document — DocuGen Public Portal</title>
+  <meta name="description" content="View, verify and download official documents generated with DocuGen.">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/document-templates.css">
+  <link rel="stylesheet" href="css/print.css">
+
+  <!-- Third-party Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/vendor/jszip.min.js"></script>
+  <script src="js/vendor/docx-preview.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body style="min-height: 100vh; display: flex; flex-direction: column;">
+
+  <!-- =========================================================================
+       PUBLIC TOP BAR (Verification & Quick Actions)
+       ========================================================================= -->
+  <header class="app-header public-top-bar" id="publicTopBar">
+    <div class="app-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; height: 4rem;">
+        <!-- Left: Brand / Verification Status -->
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.25rem;">🔒</span>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span>Official Document Portal</span>
+              <span class="badge badge-success">Verified</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+              Ref: <span id="publicDocRefBadge" class="code-badge" style="padding: 0 0.35rem;">DOC-VERIFIED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Action Buttons -->
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+          <button id="btnPublicCopyLink" class="btn btn-outline btn-sm" title="Copy public document link">
+            🔗 Share Link
+          </button>
+          <button id="btnPublicPrint" class="btn btn-secondary btn-sm" title="Print document directly">
+            🖨️ Print
+          </button>
+          <button id="btnPublicDownloadDocx" class="btn btn-secondary btn-sm" title="Download Word DOCX document">
+            📄 DOCX
+          </button>
+          <button id="btnPublicDownloadPdf" class="btn btn-primary btn-sm" title="Download high resolution PDF">
+            📥 Download PDF
+          </button>
+          <button id="btnThemeToggle" class="btn btn-outline btn-icon" title="Toggle Theme" aria-label="Toggle Theme">
+            <span id="themeToggleIcon">☀️</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN DOCUMENT CONTAINER
+       ========================================================================= -->
+  <main class="main-content" style="display: flex; align-items: center; justify-content: center; flex: 1; padding: 2.5rem 1rem;">
+    <div class="app-container" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+
+      <!-- Loading State -->
+      <div id="publicLoadingState" class="empty-state">
+        <div class="spinner-sm" style="width: 2rem; height: 2rem; border-width: 3px; margin-bottom: 1rem;"></div>
+        <h3>Loading Document...</h3>
+        <p>Verifying digital security token and fetching record.</p>
+      </div>
+
+      <!-- 404 / Invalid Token State (SRS FR-3.4) -->
+      <div id="publicNotFoundState" class="empty-state hidden glass-card" style="max-width: 500px; padding: 3rem 2rem; text-align: center;">
+        <div style="font-size: 3.5rem; margin-bottom: 0.75rem;">🔍</div>
+        <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem;">Document Not Found</h2>
+        <p id="publicNotFoundMsg" style="margin-bottom: 1.75rem;">
+          The requested document was not found or the public security link has expired.
+        </p>
+        <a href="index.html" class="btn btn-primary btn-sm">
+          Return to Home ➔
+        </a>
+      </div>
+
+      <!-- Rendered Document Element Wrapper (SRS FR-3.2, FR-3.6) -->
+      <div id="publicDocContainer" class="hidden" style="width: 100%; display: flex; justify-content: center;">
+        <!-- Injected dynamically via js/publicView.js -->
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer (Public, Subtle) -->
+  <footer style="border-top: 1px solid var(--border-subtle); padding: 1.25rem 0; text-align: center; font-size: 0.775rem; color: var(--text-dim);" class="no-print">
+    <div class="app-container">
+      Generated securely via DocuGen Pro Document Platform.
+    </div>
+  </footer>
+
+  <!-- Toast Notification Stack -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/documents.js"></script>
+  <script src="js/publicView.js"></script>
+
+  <!-- Bootstrap Public Page -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.initTheme();
+      SupabaseService.init();
+      await PublicView.init();
+    });
+  </script>
+</body>
+</html>
